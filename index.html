@@ -48,6 +48,17 @@ h3 { font-size:1.05rem; margin:1rem 0 .3rem; color:var(--nacht); }
 /* Stempel abwechselnd türkis und dunkelblau */
 .stempel:nth-child(odd) { background:var(--tuerkis-hell); }
 .stempel:nth-child(even) { border-color:var(--nacht); color:var(--nacht); background:var(--nacht-hell); }
+.stempel.offen { border:2px solid #d5dae3; color:#9aa3b2; background:#f6f7f9; transform:none; }
+.stempel.offen.naechste { border:2px dashed var(--tuerkis-knopf); color:var(--tuerkis-text); background:#fff; }
+.route-titel { margin:14px 0 4px; font-size:.95rem; color:var(--leise); }
+/* Reisepass-Zeile auf der Startseite */
+.pass-zeile { display:flex; align-items:center; gap:12px; width:100%; margin:10px 0; padding:12px 14px; border:2px solid var(--nacht); border-radius:14px; background:var(--nacht); color:#fff; text-align:left; font:inherit; cursor:pointer; }
+.pass-symbol { font-size:1.8rem; } .pass-text { flex:1; } .pass-text b { display:block; font-size:1.1rem; } .pass-text small { color:#cfe0ea; font-size:.85rem; }
+.pfeil { font-size:2rem; line-height:1; color:var(--tuerkis); }
+/* Reisepass als Buchseite */
+.pass-seite { background:#fbf6ea; border:1px solid #e3d7bd; border-radius:6px 16px 16px 6px; box-shadow:inset 10px 0 12px -10px rgba(60,40,0,.35); padding:12px 14px 16px 18px; margin:10px 0; }
+.pass-titel { font-family: Georgia, 'Times New Roman', serif; color:var(--nacht); text-align:center; letter-spacing:.06em; margin:.4rem 0 .6rem; border-bottom:1px solid #e3d7bd; padding-bottom:.4rem; }
+.zurueck { padding:10px 14px; border:1px solid var(--tuerkis-text); border-radius:10px; background:#fff; color:var(--tuerkis-text); font-size:1rem; } .zurueck.unten { display:block; width:100%; margin-top:14px; }
 .stempel small { font-size:.65rem; opacity:.85; }
 .naechster { font-size:.9rem; color:var(--leise); }
 .finale h2 { color:var(--tuerkis-text); }
@@ -1007,11 +1018,37 @@ function renderMap(state, from) {
 const stampHtml = (s, extra = '') =>
   `<div class="stempel${extra}" data-stamp${extra ? ' data-stamp-new' : ''}><b>${esc(s.name)}</b><small>${s === HOME ? 'Startpunkt' : esc(s.country)}</small></div>`;
 
+// Noch kommende Städte: die nächste gestrichelt in der Stempel-Reihe, alle weiteren blass und eingeklappt.
+const upcomingStamp = (c, next) =>
+  `<div class="stempel offen${next ? ' naechste' : ''}" data-upcoming><b>${esc(c.name)}</b><small>${esc(c.country)}</small></div>`;
+
+function upcomingHtml(reached) {
+  const next = CAPITALS[reached];
+  return next ? upcomingStamp(next, true) : '';
+}
+
+function laterHtml(reached) {
+  const later = CAPITALS.slice(reached + 1);
+  if (later.length === 0) return '';
+  return `<p class="route-titel">Noch ${later.length === 1 ? '1 Stadt' : `${later.length} Städte`} bis ${esc(CAPITALS[CAPITALS.length - 1].name)}</p><div class="stempel-liste">${later.map((c) => upcomingStamp(c, false)).join('')}</div>`;
+}
+
 function renderPass(state) {
   const j = journey(state.trainings.length);
-  return `<section class="pass"><h3>🛂 Reisepass</h3><p><b>Hauptstädte: ${j.stamps.length} von ${j.stampTotal}</b> <span class="km">${j.km.toLocaleString('de-DE')} km gereist</span></p>
-<div class="stempel-liste">${j.stamps.map((s) => stampHtml(s)).join('')}</div>
-${j.next ? `<p class="naechster">Nächster Stempel: ${esc(j.next.name)}</p>` : ''}</section>`;
+  return `<section class="pass"><h2 class="pass-titel">Reisepass</h2><p><b>Hauptstädte: ${j.stamps.length} von ${j.stampTotal}</b> <span class="km">${j.km.toLocaleString('de-DE')} km gereist</span></p>
+<div class="stempel-liste">${j.stamps.map((s) => stampHtml(s)).join('')}${upcomingHtml(j.stamps.length - 1)}</div>
+${laterHtml(j.stamps.length - 1)}</section>`;
+}
+
+// Kurze Zeile auf der Startseite. Antippen öffnet den Reisepass als eigene Seite.
+function renderPassTeaser(state) {
+  const j = journey(state.trainings.length);
+  const sub = j.next ? `${j.stamps.length} von ${j.stampTotal} Hauptstädten · Nächster Stempel: ${esc(j.next.name)}` : `Alle ${j.stampTotal} Hauptstädte gesammelt`;
+  return `<button type="button" class="pass-zeile" data-action="open-pass"><span class="pass-symbol" aria-hidden="true">🛂</span><span class="pass-text"><b>Reisepass</b><small>${sub}</small></span><span class="pfeil" aria-hidden="true">›</span></button>`;
+}
+
+function renderPassPage(state) {
+  return `<section class="pass-seite"><button type="button" class="zurueck" data-action="close-pass">‹ Zurück zum Training</button>${renderPass(state)}<button type="button" class="zurueck unten" data-action="close-pass">‹ Zurück zum Training</button></section>`;
 }
 
 function awardsOf(state) {
@@ -1051,10 +1088,14 @@ function renderFinish(state, info, spruch, messages) {
 <button type="button" class="fertig" data-action="close-finish">Weiter</button>${remoodHtml(state)}${undoButton(state)}</section>`;
 }
 
-function draw(root, state, mood, notice, today, finish, fits) {
+function draw(root, state, mood, notice, today, finish, fits, passOpen = false) {
   const j = journey(state.trainings.length);
   const head = `<header><h1>Powerzeit</h1><p>Hauptstädte: ${j.stamps.length} von ${j.stampTotal} · Training ${state.trainings.length} von ${TOTAL_TRAININGS}</p></header>
 ${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}`;
+  if (passOpen && !finish) {
+    root.innerHTML = `${head}${renderPassPage(state)}`;
+    return;
+  }
   if (finish) {
     root.innerHTML = `${head}${renderFinish(state, finish.info, finish.spruch, finish.messages)}${renderReminder(state, today)}`;
     return;
@@ -1062,7 +1103,7 @@ ${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}`;
   root.innerHTML = `${head}
 ${renderReminder(state, today)}
 ${renderMap(state)}
-${renderPass(state)}
+${renderPassTeaser(state)}
 ${renderFavoritesStatus(state)}
 ${renderToday(state, mood, today, fits)}
 ${renderPokale(state)}
@@ -1077,6 +1118,7 @@ function mount(root, storage, env = {}) {
   let mood = 2;
   let finish = null;
   let fits = {};
+  let passOpen = false;
   const today = env.today ?? (() => new Date().toLocaleDateString('sv-SE'));
   const ask = (q) => (typeof globalThis.confirm === 'function' ? globalThis.confirm(q) : true);
   // Schon getippte Turnierzahlen und ein gewähltes Nachtrage-Datum überleben das Neuzeichnen der Seite.
@@ -1086,7 +1128,7 @@ function mount(root, storage, env = {}) {
       .map((i) => [i.dataset.test ? `[data-test="${i.dataset.test}"]` : '[data-field="date"]', i.value]);
   const show = (notice = '', keepTyped = true) => {
     const typed = keepTyped ? typedValues() : [];
-    draw(root, state, mood, notice, today(), finish, fits);
+    draw(root, state, mood, notice, today(), finish, fits, passOpen);
     for (const [sel, value] of typed) {
       const field = root.querySelector?.(sel);
       if (!field) continue;
@@ -1208,6 +1250,23 @@ function mount(root, storage, env = {}) {
       showFinish(awards, msgs, ok);
       return;
     }
+    if (el.dataset.action === 'open-pass') {
+      passOpen = true;
+      try {
+        globalThis.history?.pushState?.({ pass: true }, '');
+      } catch {
+        // ohne Verlauf: "Zurück" geht trotzdem über den Knopf
+      }
+      show();
+      globalThis.scrollTo?.(0, 0);
+      return;
+    }
+    if (el.dataset.action === 'close-pass') {
+      // Mit Verlauf: zurückgehen, dann schließt der popstate-Teil die Seite (so passt auch die Zurück-Taste des Handys).
+      if (globalThis.history?.state?.pass) return globalThis.history.back();
+      passOpen = false;
+      return show();
+    }
     if (el.dataset.action === 'close-finish') {
       finish = null;
       return show();
@@ -1230,6 +1289,13 @@ function mount(root, storage, env = {}) {
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
       show('Sicherung gespeichert ✔ Die Datei liegt bei deinen Downloads.');
     }
+  });
+
+  // Zurück-Taste des Handys schließt den Reisepass, statt die App zu verlassen.
+  globalThis.addEventListener?.('popstate', () => {
+    if (!passOpen) return;
+    passOpen = false;
+    show();
   });
 
   root.addEventListener('change', async (ev) => {
