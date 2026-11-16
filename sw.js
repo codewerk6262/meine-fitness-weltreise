@@ -1,5 +1,5 @@
 // Offline-Speicher der App. Neue Version = neuer Name, alte Speicher werden gelöscht.
-const CACHE = 'weltreise-196f3b7065';
+const CACHE = 'weltreise-aa9f41b596';
 const FILES = ["./","manifest.webmanifest","icon-192.png","icon-512.png"]; // dazu index.html als './'
 
 self.addEventListener('install', (event) => {
