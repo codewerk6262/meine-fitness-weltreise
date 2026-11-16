@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1f6fb2">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Meine Weltreise</title>
+<style>
+:root { --blau:#1f6fb2; --hell:#eaf3fb; --gruen:#2e9d5b; --gold:#e0a800; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, sans-serif; background:#fff; color:#1b2a38; line-height:1.4; }
+#app { max-width: 560px; margin: 0 auto; padding: 12px; }
+h1 { margin:0; color:var(--blau); font-size:1.6rem; }
+h2 { font-size:1.25rem; margin:.6rem 0 .2rem; }
+h3 { font-size:1.05rem; margin:1rem 0 .3rem; color:var(--blau); }
+.karte { width:100%; height:auto; border-radius:12px; margin:.6rem 0; }
+.meer { fill: var(--hell); } .land { fill:#cfe3d4; }
+.route { fill:none; stroke:#9bb; stroke-width:1.2; stroke-dasharray:3 3; } .route.gone { stroke:var(--blau); stroke-width:2.2; stroke-dasharray:none; }
+.home { fill:var(--gold); stroke:var(--blau); stroke-width:1.5; }
+.stop { fill:#fff; stroke:var(--blau); stroke-width:1.2; } .stop.reached { fill:var(--gold); }
+.here { fill:#d9363e; stroke:#fff; stroke-width:1.5; }
+.uebung { background:var(--hell); border-radius:10px; padding:8px 10px; margin:6px 0; }
+.uebung summary { cursor:pointer; } .dose { color:#456; font-size:.9rem; margin-left:6px; }
+.uebung p { margin:.4rem 0 0; }
+.test { margin:8px 0; } .test input { width:6rem; font-size:1.1rem; padding:6px; margin-left:6px; }
+.hinweis { font-size:.85rem; color:#456; }
+.stimmung { text-align:center; } .mood { font-size:2rem; background:#fff; border:2px solid #cde; border-radius:50%; width:3.4rem; height:3.4rem; margin:0 6px; }
+.mood.selected { border-color:var(--gruen); background:#e6f6ec; }
+.fertig { display:block; width:100%; margin:12px 0; padding:16px; font-size:1.2rem; border:0; border-radius:14px; background:var(--gruen); color:#fff; }
+.notice { background:#fff6d6; padding:10px; border-radius:10px; }
+.erinnerung { background:var(--hell); border:2px solid var(--blau); padding:10px 12px; border-radius:12px; margin:10px 0; }
+.erinnerung p { margin:0 0 8px; }
+.erinnerung button { padding:10px 16px; font-size:1rem; border:0; border-radius:10px; background:var(--blau); color:#fff; }
+.zuletzt { font-size:.9rem; color:#456; margin:0 0 4px; }
+.sicherung button, .datei { display:inline-block; padding:10px 14px; border:1px solid var(--blau); border-radius:10px; background:#fff; color:var(--blau); margin:4px 6px 4px 0; }
+.datei input { display:block; margin-top:6px; }
+.pass .km { font-size:.85rem; color:#456; margin-left:6px; }
+.stempel-liste { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0; }
+.stempel { border:2px solid var(--blau); color:var(--blau); border-radius:50%; width:5.8rem; height:5.8rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:.74rem; overflow-wrap:anywhere; line-height:1.1; padding:4px; transform:rotate(-6deg); }
+.stempel:nth-child(even) { transform:rotate(5deg); border-color:var(--gold); color:#8a6500; }
+.stempel small { font-size:.65rem; opacity:.85; }
+.naechster { font-size:.9rem; color:#456; }
+.finale h2 { color:var(--gruen); }
+.zeile { display:flex; align-items:flex-start; gap:6px; } .zeile .uebung { flex:1; }
+.timer-start { margin:6px 0; padding:8px 10px; min-width:4.6rem; border:0; border-radius:10px; background:var(--blau); color:#fff; font-size:.95rem; white-space:nowrap; }
+.test .timer-start { margin-left:8px; }
+.timer { position:fixed; left:0; right:0; bottom:0; background:#10324f; color:#fff; padding:14px 16px 18px; text-align:center; box-shadow:0 -4px 16px rgba(0,0,0,.25); z-index:10; }
+.timer[hidden] { display:none; }
+.timer-label { margin:0; font-size:1.2rem; }
+.timer-zeit { margin:2px 0 10px; font-size:4.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
+.angehalten .timer-zeit { opacity:.5; }
+.timer-knoepfe { display:flex; gap:10px; justify-content:center; }
+.timer-knoepfe button { flex:1; max-width:12rem; padding:14px; font-size:1.1rem; border:2px solid #fff; border-radius:12px; background:transparent; color:#fff; }
+.timer-knoepfe .haupt { background:#fff; color:#10324f; }
+body:has(.timer:not([hidden])) #app { padding-bottom:16rem; }
+.abschluss h2 { color:var(--gruen); font-size:1.4rem; }
+.abschluss .stempel-liste { justify-content:center; }
+.stempel.neu { animation: stempeln .7s ease-out both; }
+@keyframes stempeln { 0% { transform:scale(2.4) rotate(-20deg); opacity:0; } 70% { transform:scale(.92) rotate(-6deg); opacity:1; } 100% { transform:scale(1) rotate(-6deg); } }
+.spruch { font-size:1.25rem; font-weight:600; text-align:center; margin:14px 0; color:#1b2a38; }
+.meldungen { padding-left:1.2rem; }
+.anprobe-zeile { margin:6px 0; display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.fit { padding:8px 12px; border:2px solid #cde; border-radius:20px; background:#fff; font-size:.95rem; }
+.fit.selected { border-color:var(--gruen); background:#e6f6ec; }
+.lieblings-stand { font-size:.9rem; color:#456; margin:2px 0 8px; }
+.lieblinge input { display:block; width:100%; padding:8px; margin:6px 0; font-size:1rem; border:1px solid #bcd; border-radius:8px; }
+.lieblinge button { padding:10px 14px; border:1px solid var(--blau); border-radius:10px; background:#fff; color:var(--blau); }
+.nachtragen { margin:8px 0; font-size:.95rem; } .nachtragen summary { cursor:pointer; color:var(--blau); }
+.nachtragen input { font-size:1rem; padding:6px; }
+.stimmung-aendern { font-size:.9rem; color:#456; }
+.remood { font-size:1.2rem; background:#fff; border:2px solid #cde; border-radius:50%; width:2.4rem; height:2.4rem; margin:0 2px; }
+.remood.selected { border-color:var(--gruen); background:#e6f6ec; }
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="timer" class="timer" hidden></div>
+<script>
+(function () {
+const TRAININGS_PER_CITY = 2;
+const BLOCK_SIZE = 8;
+
+// Startpunkt der Reise: erster Stempel im Reisepass, ohne Training.
+const HOME = { name: 'Berlin', country: 'Deutschland', lat: 52.52, lon: 13.4, legKm: 0, atKm: 0 };
+
+// Hier Städte ändern oder später weitere Rundreisen (andere Erdteile) anhängen.
+const TOURS = [
+  {
+    id: 'europa',
+    name: 'Europa-Rundreise',
+    finale: { title: 'Lissabon!', text: 'Am Meer angekommen, am westlichen Ende Europas' },
+    cities: [
+      { name: 'Kopenhagen', country: 'Dänemark', lat: 55.68, lon: 12.57 },
+      { name: 'Oslo', country: 'Norwegen', lat: 59.91, lon: 10.75 },
+      { name: 'Stockholm', country: 'Schweden', lat: 59.33, lon: 18.07 },
+      { name: 'Helsinki', country: 'Finnland', lat: 60.17, lon: 24.94 },
+      { name: 'Tallinn', country: 'Estland', lat: 59.44, lon: 24.75 },
+      { name: 'Riga', country: 'Lettland', lat: 56.95, lon: 24.11 },
+      { name: 'Moskau', country: 'Russland', lat: 55.76, lon: 37.62 },
+      { name: 'Minsk', country: 'Belarus', lat: 53.9, lon: 27.57 },
+      { name: 'Vilnius', country: 'Litauen', lat: 54.69, lon: 25.28 },
+      { name: 'Warschau', country: 'Polen', lat: 52.23, lon: 21.01 },
+      { name: 'Kyjiw', country: 'Ukraine', lat: 50.45, lon: 30.52 },
+      { name: 'Chișinău', country: 'Moldau', lat: 47.01, lon: 28.86 },
+      { name: 'Bukarest', country: 'Rumänien', lat: 44.43, lon: 26.1 },
+      { name: 'Sofia', country: 'Bulgarien', lat: 42.7, lon: 23.32 },
+      { name: 'Athen', country: 'Griechenland', lat: 37.98, lon: 23.73 },
+      { name: 'Skopje', country: 'Nordmazedonien', lat: 42.0, lon: 21.43 },
+      { name: 'Pristina', country: 'Kosovo', lat: 42.66, lon: 21.17 },
+      { name: 'Tirana', country: 'Albanien', lat: 41.33, lon: 19.82 },
+      { name: 'Podgorica', country: 'Montenegro', lat: 42.44, lon: 19.26 },
+      { name: 'Sarajevo', country: 'Bosnien und Herzegowina', lat: 43.86, lon: 18.41 },
+      { name: 'Belgrad', country: 'Serbien', lat: 44.79, lon: 20.45 },
+      { name: 'Budapest', country: 'Ungarn', lat: 47.5, lon: 19.04 },
+      { name: 'Bratislava', country: 'Slowakei', lat: 48.15, lon: 17.11 },
+      { name: 'Prag', country: 'Tschechien', lat: 50.08, lon: 14.44 },
+      { name: 'Wien', country: 'Österreich', lat: 48.21, lon: 16.37 },
+      { name: 'Zagreb', country: 'Kroatien', lat: 45.81, lon: 15.98 },
+      { name: 'Ljubljana', country: 'Slowenien', lat: 46.06, lon: 14.51 },
+      { name: 'San Marino', country: 'San Marino', lat: 43.94, lon: 12.45 },
+      { name: 'Vatikanstadt', country: 'Vatikanstadt', lat: 41.9, lon: 12.45 },
+      { name: 'Rom', country: 'Italien', lat: 41.9, lon: 12.5 },
+      { name: 'Valletta', country: 'Malta', lat: 35.9, lon: 14.51 },
+      { name: 'Monaco', country: 'Monaco', lat: 43.74, lon: 7.42 },
+      { name: 'Bern', country: 'Schweiz', lat: 46.95, lon: 7.45 },
+      { name: 'Vaduz', country: 'Liechtenstein', lat: 47.14, lon: 9.52 },
+      { name: 'Luxemburg', country: 'Luxemburg', lat: 49.61, lon: 6.13 },
+      { name: 'Brüssel', country: 'Belgien', lat: 50.85, lon: 4.35 },
+      { name: 'Amsterdam', country: 'Niederlande', lat: 52.37, lon: 4.9 },
+      { name: 'London', country: 'Vereinigtes Königreich', lat: 51.51, lon: -0.13 },
+      { name: 'Reykjavík', country: 'Island', lat: 64.15, lon: -21.94 },
+      { name: 'Dublin', country: 'Irland', lat: 53.35, lon: -6.26 },
+      { name: 'Paris', country: 'Frankreich', lat: 48.86, lon: 2.35 },
+      { name: 'Andorra la Vella', country: 'Andorra', lat: 42.51, lon: 1.52 },
+      { name: 'Madrid', country: 'Spanien', lat: 40.42, lon: -3.7 },
+      { name: 'Lissabon', country: 'Portugal', lat: 38.72, lon: -9.14 },
+    ],
+  },
+];
+
+// Luftlinie in km (Haversine).
+function distanceKm(a, b) {
+  const r = (x) => (x * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lon - a.lon) / 2) ** 2;
+  return Math.round(2 * 6371 * Math.asin(Math.sqrt(h)));
+}
+
+const CAPITALS = [];
+{
+  let prev = HOME;
+  for (const c of TOURS.flatMap((t) => t.cities)) {
+    const legKm = distanceKm(prev, c);
+    prev = { ...c, legKm, atKm: prev.atKm + legKm };
+    CAPITALS.push(prev);
+  }
+}
+
+const TOTAL_TRAININGS = CAPITALS.length * TRAININGS_PER_CITY;
+
+const clamp = (n, lo, hi) => Math.min(Math.max(Math.floor(n) || 0, lo), hi);
+
+function journey(trainings) {
+  const t = clamp(trainings, 0, TOTAL_TRAININGS);
+  const reached = Math.floor(t / TRAININGS_PER_CITY);
+  const half = t % TRAININGS_PER_CITY !== 0;
+  const stamps = [HOME, ...CAPITALS.slice(0, reached)];
+  const current = stamps[stamps.length - 1];
+  const next = CAPITALS[reached] ?? null;
+  return {
+    stamps,
+    stampTotal: CAPITALS.length + 1,
+    current,
+    next,
+    half,
+    km: half ? current.atKm + Math.round(next.legKm / 2) : current.atKm,
+    finished: t >= TOTAL_TRAININGS,
+  };
+}
+
+function stageOf(n) {
+  const num = clamp(n, 1, TOTAL_TRAININGS);
+  return { city: CAPITALS[Math.ceil(num / TRAININGS_PER_CITY) - 1], step: num % TRAININGS_PER_CITY === 0 ? 2 : 1 };
+}
+
+
+
+const PAUSE_SEC = 30;
+
+// Pro Block (4 Wochen) steigt die Dosis langsam. Ab Block 7 bleibt sie gleich,
+// stattdessen kommen nach und nach sanfte Varianten (siehe VARIANTS).
+const SETS = [2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3];
+const REPS = [8, 12, 10, 12, 15, 12, 12, 12, 12, 12, 12];
+const PLANK_SEC = [20, 30, 30, 40, 45, 60, 60, 60, 60, 60, 60];
+
+// Ab dem genannten Block ersetzt die Variante die Übung und bleibt danach.
+const VARIANTS = [
+  { block: 7, replaces: 'beckenheben', exercise: { id: 'beckenheben-einbeinig', name: 'Beckenheben einbeinig', explanation: 'Wie Beckenheben, aber ein Bein ist ausgestreckt in der Luft. Becken gerade halten, nicht zur Seite kippen. Wenn der Rücken zieht, wieder mit beiden Füßen machen.', dose: '3 × 8 Wiederholungen je Seite' } },
+  { block: 8, replaces: 'kniebeugen', exercise: { id: 'kniebeugen-pause', name: 'Kniebeugen mit Halt unten', explanation: 'Normale Kniebeuge, unten 2 Sekunden ruhig halten, dann hoch. Nur so tief, wie es für die Knie angenehm ist.', dose: '3 × 12 Wiederholungen' } },
+  { block: 9, replaces: 'plank', exercise: { id: 'seitstuetz', name: 'Seitstütz', explanation: 'Auf der Seite liegen, auf einen Unterarm stützen und das Becken anheben, sodass der Körper eine gerade Linie bildet. Leichter: die Knie bleiben am Boden.', dose: '3 × 30 Sekunden je Seite' } },
+  { block: 10, replaces: 'ausfallschritte', exercise: { id: 'ausfallschritte-seitlich', name: 'Seitliche Ausfallschritte', explanation: 'Großer Schritt zur Seite, dieses Knie beugen und den Po nach hinten schieben, das andere Bein bleibt gestreckt. Zurück zur Mitte, Seite wechseln.', dose: '3 × 12 Wiederholungen je Seite' } },
+  { block: 11, replaces: 'dead-bug', exercise: { id: 'bergsteiger-langsam', name: 'Langsame Bergsteiger', explanation: 'Im Liegestütz (Hände unter den Schultern) abwechselnd ein Knie langsam zur Brust ziehen, ohne zu springen. Rücken bleibt gerade.', dose: '3 × 12 Wiederholungen je Seite' } },
+];
+
+const HINWEIS =
+  'Wenn Knie oder Rücken wehtun, hör auf oder mach die Übung kleiner (weniger tief, weniger Wiederholungen). Etwas Muskelkater ist normal, Schmerz im Gelenk nicht. Die Zeit zählt, nicht die Sätze: Wenn die 20 Minuten um sind, bist du fertig.';
+
+const WARMUP = [
+  { id: 'hampelmann', name: 'Hampelmann', explanation: 'Springen und dabei Arme und Beine gleichzeitig öffnen und schließen. Macht warm und bringt den Kreislauf in Schwung.', dose: '1 Minute' },
+  { id: 'huefte-kreisen', name: 'Hüftkreisen', explanation: 'Aufrecht stehen und das Becken in großen Kreisen bewegen, erst in die eine, dann in die andere Richtung.', dose: '30 Sekunden je Richtung' },
+  { id: 'armkreisen', name: 'Armkreisen', explanation: 'Beide Arme gestreckt zur Seite nehmen und in großen Kreisen nach hinten und nach vorn drehen, das lockert die Schultern.', dose: '30 Sekunden je Richtung' },
+];
+
+const COOLDOWN = [
+  { id: 'dehnung-oberschenkel-vorn', name: 'Oberschenkel-Dehnung vorn', explanation: 'Im Stehen den Fuß zum Po ziehen und das Knie nach unten halten, so dehnt sich die Vorderseite des Oberschenkels (Quadrizeps).', dose: '30 Sekunden je Seite' },
+  { id: 'dehnung-oberschenkel-hinten', name: 'Oberschenkel-Dehnung hinten', explanation: 'Ein Bein ausstrecken, die Ferse aufsetzen und den Oberkörper mit geradem Rücken nach vorn neigen, so dehnt sich die Rückseite (Beinbeuger).', dose: '30 Sekunden je Seite' },
+  { id: 'kindshaltung', name: 'Kindshaltung', explanation: 'Auf den Knien sitzen, den Po zu den Fersen schieben und die Arme weit nach vorn legen, das entspannt Rücken und Schultern.', dose: '45 Sekunden' },
+];
+
+const TESTS = [
+  { id: 'kniebeugen-1min', name: 'Kniebeugen in 1 Minute', unit: 'Wiederholungen', timer: { mode: 'countdown', dose: '1 Minute' }, explanation: 'Zähle, wie viele saubere Kniebeugen du in einer Minute schaffst (Oberschenkel mindestens waagerecht).' },
+  { id: 'plank-sek', name: 'Plank halten', unit: 'Sekunden', timer: { mode: 'stopwatch' }, explanation: 'Plank heißt Unterarmstütz: Auf Unterarmen und Zehen, der Körper bildet eine gerade Linie. Stoppe, wie lange du das hältst (die Stoppuhr trägt die Sekunden für dich ein).' },
+  { id: 'liegestuetze', name: 'Liegestütze', unit: 'Wiederholungen', explanation: 'So viele saubere Liegestütze wie möglich, auf den Knien oder auf den Zehen, ohne Pause.' },
+];
+
+function mainFor(block) {
+  const sets = SETS[block - 1];
+  const reps = REPS[block - 1];
+  const plank = PLANK_SEC[block - 1];
+  const base = [
+    { id: 'kniebeugen', name: 'Kniebeugen', explanation: 'Füße schulterbreit, Po nach hinten unten schieben, als würdest du dich auf einen Stuhl setzen, Rücken gerade, dann wieder hoch.', dose: `${sets} × ${reps} Wiederholungen` },
+    { id: 'ausfallschritte', name: 'Ausfallschritte rückwärts', explanation: 'Mit einem Bein einen großen Schritt nach hinten machen, beide Knie beugen, dann zurück zum Stand. Beine abwechseln.', dose: `${sets} × ${reps} Wiederholungen je Seite` },
+    { id: 'beckenheben', name: 'Beckenheben', explanation: 'Auf dem Rücken liegen, Füße aufgestellt, Po und Becken anheben bis Knie, Hüfte und Schultern eine Linie bilden (auch Glute Bridge genannt).', dose: `${sets} × ${reps} Wiederholungen` },
+    { id: 'liegestuetze-knie', name: 'Liegestütze auf den Knien', explanation: 'Hände unter den Schultern, Knie am Boden, Brust Richtung Boden beugen und wieder hochdrücken, Rücken bleibt gerade.', dose: `${sets} × ${Math.max(reps - 2, 6)} Wiederholungen` },
+    { id: 'dead-bug', name: 'Dead Bug (Käfer)', explanation: 'Auf dem Rücken, Arme zur Decke, Knie über der Hüfte. Gegenüberliegenden Arm und Bein langsam strecken, ohne dass der untere Rücken abhebt, dann wechseln.', dose: `${sets} × ${reps} Wiederholungen` },
+    { id: 'plank', name: 'Plank (Unterarmstütz)', explanation: 'Auf Unterarmen und Zehen stützen, Körper in gerader Linie halten, Bauch und Po fest.', dose: `${sets} × ${plank} Sekunden` },
+  ];
+  return base.map((e) => VARIANTS.find((v) => v.replaces === e.id && v.block <= block)?.exercise ?? e);
+}
+
+function sessionFor(n) {
+  const num = Math.min(Math.max(Math.floor(n) || 1, 1), TOTAL_TRAININGS);
+  const block = Math.ceil(num / BLOCK_SIZE);
+  const turnier = num % BLOCK_SIZE === 0;
+  return {
+    kind: turnier ? 'turnier' : 'training',
+    block,
+    warmup: WARMUP,
+    main: turnier ? [] : mainFor(block),
+    cooldown: COOLDOWN,
+    tests: turnier ? TESTS : [],
+    pause: `Pause: etwa ${PAUSE_SEC} Sekunden zwischen den Sätzen.`,
+    hinweis: HINWEIS,
+  };
+}
+
+// Zeitlogik für den Timer. Die Uhr kommt von außen, damit die Zeit auch
+// stimmt, wenn das Handy kurz hakt: gerechnet wird immer aus der Uhrzeit.
+
+const LEAD_SEC = 3;
+const LEAD = { label: "Gleich geht's los", seconds: LEAD_SEC, signal: null };
+const DOSE_RE = /^(?:(\d+)\s*[×x]\s*)?(\d+)\s*(Minuten?|Sekunden?)(?:\s+je\s+(Seite|Richtung))?$/;
+
+// Abschnitte aus einer Dosis wie "3 × 40 Sekunden" oder "30 Sekunden je Seite".
+// null, wenn die Übung keine Zeitangabe hat (Wiederholungen).
+function phasesFor(dose, pauseSec) {
+  const m = DOSE_RE.exec(String(dose).trim());
+  if (!m) return null;
+  const sets = m[1] ? Number(m[1]) : 1;
+  const sec = Number(m[2]) * (m[3].startsWith('Minute') ? 60 : 1);
+  const side = m[4];
+  const phases = [LEAD];
+  for (let s = 1; s <= sets; s++) {
+    const satz = sets > 1 ? `Satz ${s} von ${sets}` : '';
+    if (s > 1) phases.push({ label: 'Pause', seconds: pauseSec, signal: 'pause' });
+    if (side) {
+      phases.push({ label: [satz, `${side} 1`].filter(Boolean).join(' · '), seconds: sec, signal: 'los' });
+      phases.push({ label: [satz, `${side} 2`].filter(Boolean).join(' · '), seconds: sec, signal: 'wechseln' });
+    } else {
+      phases.push({ label: satz || 'Los', seconds: sec, signal: 'los' });
+    }
+  }
+  return phases;
+}
+
+function totalSeconds(phases) {
+  return phases.slice(1).reduce((sum, p) => sum + p.seconds, 0);
+}
+
+function positionAt(phases, elapsedMs) {
+  let start = 0;
+  for (let i = 0; i < phases.length; i++) {
+    const end = start + phases[i].seconds * 1000;
+    if (elapsedMs < end) return { index: i, remainingSec: Math.ceil((end - elapsedMs) / 1000), done: false };
+    start = end;
+  }
+  return { index: phases.length - 1, remainingSec: 0, done: true };
+}
+
+function formatTime(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// Vibrationsmuster (Millisekunden an/aus), gut ohne Hinsehen zu unterscheiden.
+const PATTERNS = {
+  los: [400],
+  pause: [150, 100, 150],
+  wechseln: [100, 80, 100, 80, 100],
+  fertig: [600, 200, 600],
+};
+
+const STOPWATCH = [LEAD, { label: 'Halten!', seconds: Infinity, signal: 'los' }];
+
+// Steuerung eines Timers. Tickt nicht selbst: tick() wird regelmäßig von der Anzeige aufgerufen.
+function createTimer({ phases, mode = 'countdown', clock, vibrate, onChange = () => {} }) {
+  const list = mode === 'stopwatch' ? STOPWATCH : phases;
+  let acc = 0;
+  let since = clock();
+  let paused = false;
+  let stopped = false;
+  let finished = false;
+  let lastIndex = 0;
+
+  const elapsed = () => acc + (paused || stopped ? 0 : clock() - since);
+  const buzz = (p) => {
+    try {
+      vibrate?.(p);
+    } catch {
+      // Vibration ist nur ein Zusatz.
+    }
+  };
+
+  function view() {
+    const ms = elapsed();
+    const pos = positionAt(list, ms);
+    const lead = pos.index === 0 && !pos.done;
+    let seconds = pos.remainingSec;
+    if (mode === 'stopwatch' && !lead) seconds = Math.floor((ms - LEAD_SEC * 1000) / 1000);
+    return {
+      mode,
+      label: list[pos.index].label,
+      seconds,
+      running: !stopped && !finished,
+      paused,
+      done: finished,
+      lead,
+    };
+  }
+
+  function tick() {
+    if (stopped || finished) return;
+    const pos = positionAt(list, elapsed());
+    if (pos.done) {
+      finished = true;
+      buzz(PATTERNS.fertig);
+    } else if (pos.index !== lastIndex) {
+      const signal = list[pos.index].signal;
+      if (signal) buzz(PATTERNS[signal]);
+    }
+    lastIndex = pos.index;
+    onChange(view());
+  }
+
+  function pause() {
+    if (paused || stopped || finished) return;
+    acc = elapsed();
+    paused = true;
+    onChange(view());
+  }
+
+  function resume() {
+    if (!paused || stopped || finished) return;
+    since = clock();
+    paused = false;
+    onChange(view());
+  }
+
+  function stop() {
+    if (stopped || finished) return;
+    acc = elapsed();
+    stopped = true;
+    if (mode === 'stopwatch') finished = true;
+    onChange(view());
+  }
+
+  return { tick, pause, resume, stop, view };
+}
+
+
+
+
+// Startknopf neben einer Übung; leer, wenn die Übung keine Zeitangabe hat.
+function timerButton(dose) {
+  const phases = phasesFor(dose, PAUSE_SEC);
+  if (!phases) return '';
+  return `<button type="button" class="timer-start" data-action="timer" data-dose="${dose.replace(/"/g, '&quot;')}" aria-label="Timer starten">▶ ${formatTime(totalSeconds(phases))}</button>`;
+}
+
+// Startknopf bei einem Turnier-Test (Countdown oder Stoppuhr).
+function testTimerButton(t) {
+  if (!t.timer) return '';
+  const text = t.timer.mode === 'stopwatch' ? '⏱ Stoppuhr' : `▶ ${formatTime(totalSeconds(phasesFor(t.timer.dose, PAUSE_SEC)))}`;
+  return `<button type="button" class="timer-start" data-action="timer" data-test-timer="${t.id}">${text}</button>`;
+}
+
+function renderTimer(view) {
+  const stopwatch = view.mode === 'stopwatch';
+  let time = view.lead ? String(view.seconds) : formatTime(view.seconds);
+  let label = view.label;
+  let buttons;
+  if (view.done) {
+    label = 'Fertig ✔';
+    time = stopwatch ? formatTime(view.seconds) : '0:00';
+    buttons = '<button type="button" data-timer="close">Schließen</button>';
+  } else if (stopwatch) {
+    buttons = '<button type="button" class="haupt" data-timer="stop">Stopp – übernehmen</button><button type="button" data-timer="cancel">Abbrechen</button>';
+  } else {
+    buttons = `${view.paused ? '<button type="button" class="haupt" data-timer="resume">Weiter</button>' : '<button type="button" class="haupt" data-timer="pause">Anhalten</button>'}<button type="button" data-timer="stop">Abbrechen</button>`;
+  }
+  return `<div class="timer-box${view.paused ? ' angehalten' : ''}"><p class="timer-label">${label}</p><p class="timer-zeit">${time}</p><div class="timer-knoepfe">${buttons}</div></div>`;
+}
+
+// Steuert den einen Timer auf der Seite: Anzeige, Ticken, Bildschirm-an.
+// onStopwatch(testId, sekunden) wird gerufen, wenn die Stoppuhr übernommen wird.
+function timerController(timerEl, env, onStopwatch) {
+  const nav = globalThis.navigator;
+  const clock = env.clock ?? (() => Date.now());
+  const every = env.every ?? ((fn, ms) => setInterval(fn, ms));
+  const cancel = env.cancel ?? ((id) => clearInterval(id));
+  const vibrate = 'vibrate' in env ? env.vibrate : (p) => nav?.vibrate?.(p);
+  const wakeLock = 'wakeLock' in env ? env.wakeLock : nav?.wakeLock;
+  let active = null;
+  let lockToken = 0;
+  let lockObj = null;
+
+  function lock() {
+    if (!wakeLock?.request) return;
+    const my = ++lockToken;
+    try {
+      Promise.resolve(wakeLock.request('screen')).then(
+        (l) => (my === lockToken ? (lockObj = l) : l?.release?.()),
+        () => {},
+      );
+    } catch {
+      // Bildschirm-an nicht möglich: Timer läuft trotzdem.
+    }
+  }
+
+  function unlock() {
+    lockToken++;
+    const l = lockObj;
+    lockObj = null;
+    try {
+      l?.release?.();
+    } catch {
+      // nichts zu tun
+    }
+  }
+
+  function end(hide) {
+    if (!active) return;
+    cancel(active.interval);
+    unlock();
+    active = null;
+    if (hide) timerEl.hidden = true;
+  }
+
+  function start({ dose, testId }) {
+    end(false);
+    const t = TESTS.find((x) => x.id === testId);
+    const spec = t?.timer ?? { mode: 'countdown', dose };
+    const phases = spec.mode === 'stopwatch' ? undefined : phasesFor(spec.dose, PAUSE_SEC);
+    if (spec.mode !== 'stopwatch' && !phases) return;
+    const me = { testId };
+    me.timer = createTimer({
+      phases,
+      mode: spec.mode,
+      clock,
+      vibrate,
+      onChange: (v) => {
+        timerEl.innerHTML = renderTimer(v);
+        if (v.done && active === me) {
+          cancel(me.interval);
+          unlock();
+        }
+      },
+    });
+    me.interval = every(() => me.timer.tick(), 250);
+    active = me;
+    timerEl.innerHTML = renderTimer(me.timer.view());
+    timerEl.hidden = false;
+    lock();
+  }
+
+  timerEl.addEventListener('click', (ev) => {
+    const el = ev.target.closest('[data-timer]');
+    if (!el) return;
+    const what = el.dataset.timer;
+    if (what === 'close') {
+      end(true);
+      timerEl.hidden = true;
+      return;
+    }
+    if (!active) return;
+    const { timer, testId } = active;
+    if (what === 'pause') {
+      timer.pause();
+      unlock();
+    } else if (what === 'resume') {
+      timer.resume();
+      lock();
+    } else if (what === 'cancel') {
+      end(true);
+    } else if (what === 'stop') {
+      timer.stop();
+      const v = timer.view();
+      if (v.mode === 'stopwatch' && !v.lead && v.seconds > 0) onStopwatch(testId, v.seconds);
+      end(true);
+    }
+  });
+
+  try {
+    globalThis.document?.addEventListener?.('visibilitychange', () => {
+      const v = active?.timer.view();
+      if (globalThis.document.visibilityState === 'visible' && v?.running && !v.paused) lock();
+    });
+  } catch {
+    // nur ein Zusatz
+  }
+
+  return { start, stop: () => end(true) };
+}
+
+
+
+const STORAGE_KEY = 'weltreise-fitness-v1';
+const RESCUE_KEY = 'weltreise-fitness-v1-beschaedigt';
+const PREVIOUS_KEY = 'weltreise-fitness-v1-vorher';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const isMood = (m) => m === 1 || m === 2 || m === 3;
+const isValue = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+const knownTest = (id) => TESTS.some((t) => t.id === id);
+
+function emptyState() {
+  return { version: 1, trainings: [], results: [], favorites: [], fittings: [] };
+}
+
+function completeTraining(state, date, mood) {
+  if (typeof date !== 'string' || !DATE_RE.test(date) || !isMood(mood)) return state;
+  if (state.trainings.some((t) => t.date === date)) return state;
+  return { ...state, trainings: [...state.trainings, { date, mood }] };
+}
+
+function recordResult(state, testId, value) {
+  if (!knownTest(testId) || !isValue(value)) return { state, award: 'none' };
+  const earlier = state.results.filter((r) => r.testId === testId).map((r) => r.value);
+  let award = 'none';
+  if (earlier.length === 0) award = 'startmarke';
+  else if (value > Math.max(...earlier)) award = 'pokal';
+  const result = { testId, value, trainingNumber: state.trainings.length };
+  return { state: { ...state, results: [...state.results, result] }, award };
+}
+
+function serialize(state) {
+  return JSON.stringify(state);
+}
+
+function parse(json) {
+  if (typeof json !== 'string') return null;
+  let data;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!data || data.version !== 1 || !Array.isArray(data.trainings) || !Array.isArray(data.results)) return null;
+  const trainingsOk = data.trainings.every(
+    (t) => t && typeof t.date === 'string' && DATE_RE.test(t.date) && isMood(t.mood),
+  );
+  const resultsOk = data.results.every(
+    (r) => r && knownTest(r.testId) && isValue(r.value) && Number.isInteger(r.trainingNumber),
+  );
+  if (!trainingsOk || !resultsOk) return null;
+  const state = {
+    version: 1,
+    trainings: data.trainings,
+    results: data.results,
+    // Ältere Stände haben keine Lieblingsstücke; ein kaputtes Feld wird nur ignoriert.
+    favorites: Array.isArray(data.favorites) && data.favorites.every(isFavorite) ? data.favorites : [],
+    fittings: Array.isArray(data.fittings) && data.fittings.every(isFitting) ? data.fittings : [],
+  };
+  // Ältere Stände haben noch kein Sicherungs-Feld: dann fehlt es einfach.
+  if (isBackup(data.lastBackup)) state.lastBackup = { date: data.lastBackup.date, trainings: data.lastBackup.trainings };
+  return state;
+}
+
+const isBackup = (b) =>
+  !!b && typeof b.date === 'string' && DATE_RE.test(b.date) && Number.isInteger(b.trainings) && b.trainings >= 0;
+
+const BACKUP_DAYS = 14;
+
+// Merkt sich, wann zuletzt eine Sicherung gespeichert wurde und wie viele Trainings sie enthält.
+function markBackup(state, date) {
+  return { ...state, lastBackup: { date, trainings: state.trainings.length } };
+}
+
+const dayNumber = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000;
+
+// Grund für die Sicherungs-Erinnerung: 'nie', 'turnier', 'alt' oder null (keine Erinnerung).
+function backupReminder(state, today) {
+  const done = state.trainings.length;
+  if (done === 0) return null;
+  const b = state.lastBackup;
+  if (!b) return 'nie';
+  for (let n = b.trainings + 1; n <= done; n++) {
+    if (sessionFor(n).kind === 'turnier') return 'turnier';
+  }
+  if (typeof today === 'string' && DATE_RE.test(today) && dayNumber(today) - dayNumber(b.date) > BACKUP_DAYS) return 'alt';
+  return null;
+}
+
+function loadStatus(storage) {
+  let raw;
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return { state: emptyState(), damaged: false };
+  }
+  if (raw === null || raw === undefined) return { state: emptyState(), damaged: false };
+  const parsed = parse(raw);
+  if (parsed) return { state: parsed, damaged: false };
+  try {
+    storage.setItem?.(RESCUE_KEY, raw);
+  } catch {
+    // Kopie nicht möglich: Der Stand bleibt trotzdem unter dem alten Schlüssel, bis zum nächsten Speichern.
+  }
+  return { state: emptyState(), damaged: true };
+}
+
+function load(storage) {
+  return loadStatus(storage).state;
+}
+
+function keepPrevious(storage, state) {
+  try {
+    storage.setItem(PREVIOUS_KEY, serialize(state));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function undoLast(state) {
+  if (state.trainings.length === 0) return state;
+  const number = state.trainings.length;
+  return {
+    ...state,
+    trainings: state.trainings.slice(0, -1),
+    results: state.results.filter((r) => r.trainingNumber !== number),
+    fittings: (state.fittings ?? []).filter((f) => f.trainingNumber !== number),
+  };
+}
+
+function suspicious(state, testId, value) {
+  const earlier = state.results.filter((r) => r.testId === testId).map((r) => r.value);
+  return earlier.length > 0 && value > 3 * Math.max(...earlier);
+}
+
+function save(storage, state) {
+  try {
+    storage.setItem(STORAGE_KEY, serialize(state));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ---- Lieblingsstücke ----
+const FIT_LEVELS = ['noch-nicht', 'fast', 'passt'];
+const MAX_FAVORITES = 3;
+const FAV_NAME_MAX = 40;
+const FAV_ID_RE = /^f(\d+)$/;
+
+const isFavorite = (f) =>
+  !!f && typeof f.id === 'string' && FAV_ID_RE.test(f.id) && typeof f.name === 'string' && f.name.length > 0 &&
+  (f.removed === undefined || f.removed === true);
+const isFitting = (f) =>
+  !!f && typeof f.favId === 'string' && FIT_LEVELS.includes(f.level) && Number.isInteger(f.trainingNumber);
+
+// Stücke, die gerade gelten. Entfernte bleiben gespeichert, damit ihre Nummer nie neu vergeben wird.
+function activeFavorites(state) {
+  return (state.favorites ?? []).filter((f) => !f.removed);
+}
+
+// entries: [{ id, name }]. Mit id: umbenennen oder (leerer Name) entfernen. Ohne id: neues Stück.
+function saveFavorites(state, entries) {
+  let favorites = [...(state.favorites ?? [])];
+  let next = Math.max(0, ...favorites.map((f) => Number(FAV_ID_RE.exec(f.id)[1]))) + 1;
+  for (const e of entries) {
+    const name = String(e.name ?? '').trim().slice(0, FAV_NAME_MAX);
+    if (e.id) {
+      favorites = favorites.map((f) => {
+        if (f.id !== e.id || f.removed) return f;
+        return name ? { id: f.id, name } : { ...f, removed: true };
+      });
+    } else if (name && favorites.filter((f) => !f.removed).length < MAX_FAVORITES) {
+      favorites.push({ id: `f${next++}`, name });
+    }
+  }
+  return { ...state, favorites };
+}
+
+function recordFitting(state, favId, level) {
+  if (!FIT_LEVELS.includes(level) || !activeFavorites(state).some((f) => f.id === favId)) return { state, award: 'none' };
+  const fittings = state.fittings ?? [];
+  const firstFit = level === 'passt' && !fittings.some((f) => f.favId === favId && f.level === 'passt');
+  const fitting = { favId, level, trainingNumber: state.trainings.length };
+  return { state: { ...state, fittings: [...fittings, fitting] }, award: firstFit ? 'passt-pokal' : 'none' };
+}
+
+function latestFittings(state) {
+  const out = {};
+  for (const f of state.fittings ?? []) out[f.favId] = { level: f.level, trainingNumber: f.trainingNumber };
+  return out;
+}
+
+// ---- Nachtragen und Stimmung ändern ----
+// Nachtragen geht nur für Tage vor heute und nach dem zuletzt eingetragenen Training,
+// damit sich die Nummern (und damit Turniere und ihre Ergebnisse) nie verschieben.
+function checkPastDate(state, date, today) {
+  if (typeof date !== 'string' || !DATE_RE.test(date)) return 'ungueltig';
+  if (date >= today) return 'zukunft';
+  const last = state.trainings[state.trainings.length - 1];
+  if (last && date <= last.date) return 'zu-frueh';
+  return 'ok';
+}
+
+function changeLastMood(state, mood) {
+  if (!isMood(mood) || state.trainings.length === 0) return state;
+  const trainings = [...state.trainings];
+  trainings[trainings.length - 1] = { ...trainings[trainings.length - 1], mood };
+  return { ...state, trainings };
+}
+
+// Hier Sprüche ergänzen: kurz, freundlich, du-Form, ohne Bezug zu Gewicht oder Aussehen.
+const SPRUECHE = {
+  training: [
+    'Gut gemacht, das war stark!',
+    'Wieder ein Stück weiter. Du bleibst dran!',
+    'Erledigt! Darauf kannst du stolz sein.',
+    'Genau so geht das: einfach machen.',
+    'Training geschafft, der Abend gehört jetzt dir.',
+    'Jedes Training zählt, und das hier ganz besonders.',
+    'Stark durchgezogen!',
+    'Du hast dir heute selbst einen Gefallen getan.',
+    'Schritt für Schritt kommst du voran.',
+    'Klasse, die Reise geht weiter!',
+  ],
+  hauptstadt: [
+    'Neue Stadt, neuer Stempel. Willkommen!',
+    'Angekommen! Schau dich ruhig ein bisschen um.',
+    'Wieder eine Hauptstadt mehr in deinem Pass.',
+    'Koffer abstellen, ankommen, genießen. Gut gemacht!',
+  ],
+  turnier: [
+    'Turnier geschafft! Du hast alles gegeben.',
+    'Das war Wettkampf-Stimmung wie früher.',
+    'Turniertag erledigt. Respekt!',
+  ],
+  pokal: [
+    'Neuer Rekord! Der Pokal gehört dir.',
+    'Besser als je zuvor. Das ist dein Pokal!',
+    'Rekord gebrochen, ganz stark!',
+  ],
+  passt: [
+    'Es passt wieder! Was für ein Moment.',
+    'Dein Lieblingsstück ist zurück!',
+    'Passt! Dafür hast du dir jeden Abend Zeit genommen.',
+  ],
+  lissabon: [
+    'Lissabon! Du hast ganz Europa bereist.',
+    'Am Meer angekommen. Was für eine Reise!',
+    'Alle Hauptstädte Europas gesammelt. Unglaublich stark!',
+  ],
+};
+
+// Zufälliger Spruch der Art kind, nie derselbe wie last.
+function pickSpruch(kind, last, random = Math.random) {
+  const list = SPRUECHE[kind] ?? SPRUECHE.training;
+  const choices = list.filter((s) => s !== last);
+  return choices[Math.min(Math.floor(random() * choices.length), choices.length - 1)];
+}
+
+
+
+
+// Letzter gezeigter Spruch, eigener Schlüssel (gehört nicht in die Sicherung).
+const SPRUCH_KEY = 'weltreise-fitness-v1-spruch';
+
+// Was nach "Training fertig" gezeigt wird. awards: Zahl neuer Pokale und Lieblingsstück-Pokale.
+function finishInfo(stateAfter, awards = { pokal: 0, passt: 0 }) {
+  const n = stateAfter.trainings.length;
+  const { city, step } = stageOf(n);
+  const finale = n >= TOTAL_TRAININGS;
+  const kind = finale ? 'finale' : step === 1 ? 'unterwegs' : 'angekommen';
+  const title = finale
+    ? TOURS[0].finale.title
+    : kind === 'unterwegs'
+      ? `Unterwegs nach ${city.name}, halbe Strecke geschafft`
+      : `Willkommen in ${city.name}!`;
+  let spruchKind = 'training';
+  if (finale) spruchKind = 'lissabon';
+  else if (awards.passt > 0) spruchKind = 'passt';
+  else if (awards.pokal > 0) spruchKind = 'pokal';
+  else if (sessionFor(n).kind === 'turnier') spruchKind = 'turnier';
+  else if (kind === 'angekommen') spruchKind = 'hauptstadt';
+  return { kind, city, title, spruchKind, from: n - 1 };
+}
+
+
+
+
+
+
+
+
+
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const MOODS = [{ v: 1, e: '😩', l: 'Anstrengend' }, { v: 2, e: '😐', l: 'Okay' }, { v: 3, e: '💪', l: 'Stark' }];
+const testName = (id) => TESTS.find((t) => t.id === id)?.name ?? id;
+const testUnit = (id) => TESTS.find((t) => t.id === id)?.unit ?? '';
+
+function exerciseHtml(e) {
+  return `<div class="zeile"><details class="uebung"><summary><b>${esc(e.name)}</b> <span class="dose">${esc(e.dose)}</span></summary><p>${esc(e.explanation)}</p></details>${timerButton(e.dose)}</div>`;
+}
+
+const undoButton = (state) =>
+  state.trainings.length > 0 ? '<button type="button" class="undo" data-action="undo">Letzten Eintrag rückgängig</button>' : '';
+const nTrainings = (n) => `${n} ${n === 1 ? 'Training' : 'Trainings'}`;
+
+function importQuestion(current, incoming) {
+  return `Die Sicherung hat ${nTrainings(incoming.trainings.length)}, dein jetziger Stand hat ${current.trainings.length}. Jetzt ersetzen? (Dein jetziger Stand wird vorher zur Sicherheit aufbewahrt.)`;
+}
+
+// Prüft die Rohtexte der Turnier-Felder: alles leer, mindestens ein ungültiger Wert oder ok.
+function checkInputs(raw) {
+  const filled = raw.map((r) => String(r).trim()).filter((r) => r !== '');
+  if (filled.length === 0) return 'leer';
+  const bad = filled.some((r) => !(Number.isFinite(Number(r)) && Number(r) > 0));
+  return bad ? 'ungueltig' : 'ok';
+}
+
+const REMINDER_REASON = {
+  nie: 'Du hast deinen Stand noch nie gesichert.',
+  turnier: 'Nach dem Turnier ist ein guter Moment zum Sichern.',
+  alt: 'Deine letzte Sicherung ist über 2 Wochen her.',
+};
+
+function renderReminder(state, today) {
+  const reason = backupReminder(state, today);
+  if (!reason) return '';
+  return `<section class="erinnerung"><p><b>💾 ${REMINDER_REASON[reason]}</b> Dein Stand liegt nur in diesem Browser. Sichere ihn ab und zu als Datei, dann geht nichts verloren.</p><button type="button" data-action="export">Jetzt sichern</button></section>`;
+}
+
+const deDate = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+const shiftDay = (d, k) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10) + k)).toISOString().slice(0, 10);
+
+// Stimmung des zuletzt eingetragenen Trainings nachträglich ändern.
+function remoodHtml(state) {
+  const last = state.trainings[state.trainings.length - 1];
+  if (!last) return '';
+  const btns = MOODS.map((m) => `<button type="button" class="remood${m.v === last.mood ? ' selected' : ''}" data-remood="${m.v}" aria-pressed="${m.v === last.mood}" aria-label="${m.l}">${m.e}</button>`).join('');
+  return `<p class="stimmung-aendern">Stimmung beim letzten Training (${deDate(last.date)}): ${btns}</p>`;
+}
+
+function backfillHtml(state, today) {
+  if (!today) return '';
+  const last = state.trainings[state.trainings.length - 1];
+  const min = last ? ` min="${shiftDay(last.date, 1)}"` : '';
+  return `<details class="nachtragen"><summary>Vergessen einzutragen?</summary><p>Wähle den Tag, an dem du trainiert hast. Dann wie gewohnt Stimmung wählen und „Training fertig“.</p><input type="date" data-field="date"${min} max="${shiftDay(today, -1)}"></details>`;
+}
+
+const FIT_TEXT = { 'noch-nicht': 'noch nicht', fast: 'fast', passt: 'passt!' };
+
+function fittingHtml(state, fits) {
+  const favs = activeFavorites(state);
+  if (favs.length === 0) return '';
+  const rows = favs
+    .map((f) => `<div class="anprobe-zeile"><span>${esc(f.name)}:</span> ${FIT_LEVELS.map((l) => `<button type="button" class="fit${fits[f.id] === l ? ' selected' : ''}" data-fit="${f.id}" data-level="${l}">${FIT_TEXT[l]}</button>`).join('')}</div>`)
+    .join('');
+  return `<h3>👗 Anprobe</h3><p class="hinweis">Probier deine Lieblingsstücke an, wenn du magst. Freiwillig: ohne Auswahl wird nichts eingetragen.</p>${rows}`;
+}
+
+function renderFavoritesStatus(state) {
+  const favs = activeFavorites(state);
+  if (favs.length === 0) return '';
+  const latest = latestFittings(state);
+  const parts = favs.map((f) => `${esc(f.name)}: ${latest[f.id] ? FIT_TEXT[latest[f.id].level] : 'noch nicht anprobiert'}`);
+  return `<p class="lieblings-stand">👗 ${parts.join(' · ')}</p>`;
+}
+
+function renderFavoritesSettings(state) {
+  const favs = activeFavorites(state);
+  const fields = [...favs.map((f) => ({ id: f.id, name: f.name })), ...Array(3 - favs.length).fill({ id: 'neu', name: '' })];
+  return `<section class="lieblinge"><h3>👗 Lieblingsstücke</h3><p class="hinweis">Kleidungsstücke, die du wieder tragen möchtest (bis zu 3). Beim Turnier probierst du sie an. Zum Entfernen den Namen löschen.</p>
+${fields.map((f, i) => `<input type="text" maxlength="40" placeholder="Stück ${i + 1}, z. B. Blaue Jeans" data-fav="${f.id}" value="${esc(f.name)}">`).join('')}
+<button type="button" data-action="save-favorites">Lieblingsstücke speichern</button></section>`;
+}
+
+function renderToday(state, mood = 2, today = null, fits = {}) {
+  const done = state.trainings.length;
+  const j = journey(done);
+  if (j.finished) {
+    const f = TOURS[0].finale;
+    return `<section class="heute finale"><h2>${esc(f.title)} 🎉</h2><p>${esc(f.text)}.</p><p>${j.stampTotal} Hauptstädte, ${j.km.toLocaleString('de-DE')} km, ${TOTAL_TRAININGS} Trainings.</p></section>`;
+  }
+  const last = state.trainings[done - 1];
+  if (today && last && last.date === today) {
+    return `<section class="heute"><h2>Heute erledigt ✔</h2><p>Training ${done} von ${TOTAL_TRAININGS} geschafft. ${j.next ? `Nächstes Ziel: ${esc(j.next.name)}.` : ''} Bis zum nächsten Mal!</p>${remoodHtml(state)}${undoButton(state)}</section>`;
+  }
+  const n = done + 1;
+  const s = sessionFor(n);
+  const turnier = s.kind === 'turnier';
+  const city = stageOf(n).city.name;
+  const head = turnier ? `Training ${n} von ${TOTAL_TRAININGS} · Turnier in ${esc(city)}` : `Training ${n} von ${TOTAL_TRAININGS}`;
+  const next = `Unterwegs nach ${esc(city)}`;
+  const kraft = turnier
+    ? `<h3>Turnier</h3><p>Gib alles und trage danach deine Zahlen ein (leer lassen, wenn du einen Test auslässt).</p>${s.tests
+        .map((t) => `<div class="test"><details class="uebung"><summary><b>${esc(t.name)}</b></summary><p>${esc(t.explanation)}</p></details><label>${esc(t.unit)} <input type="number" inputmode="numeric" min="1" data-test="${t.id}"></label>${testTimerButton(t)}</div>`)
+        .join('')}${fittingHtml(state, fits)}`
+    : `<h3>Kraft (20 Min)</h3><p>${esc(s.pause)}</p>${s.main.map(exerciseHtml).join('')}`;
+  const moods = MOODS.map((m) => `<button type="button" class="mood${m.v === mood ? ' selected' : ''}" data-mood="${m.v}" aria-label="${m.l}">${m.e}</button>`).join('');
+  return `<section class="heute"><h2>${head}</h2><p class="km">${next}</p>
+<h3>Aufwärmen (5 Min)</h3>${s.warmup.map(exerciseHtml).join('')}
+${kraft}
+<h3>Dehnen (5 Min)</h3>${s.cooldown.map(exerciseHtml).join('')}
+<p class="hinweis">${esc(s.hinweis)}</p>
+<div class="stimmung"><p>Wie war's?</p>${moods}</div>
+<button type="button" class="fertig" data-action="done">Training fertig</button>${backfillHtml(state, today)}${remoodHtml(state)}${undoButton(state)}</section>`;
+}
+
+// Europakarte: grobe, selbst gezeichnete Umrisse (Länge, Breite).
+const K = 10;
+const COS = Math.cos((52 * Math.PI) / 180);
+const project = (lon, lat) => [(lon + 25) * COS * K, (72 - lat) * K];
+const LAND = [
+  [[-5.6,36],[-6.3,36.8],[-7.4,37.2],[-8.9,37],[-8.8,38.7],[-9.5,39.4],[-8.8,42],[-9.3,43],[-8,43.7],[-4,43.5],[-1.6,43.4],[-1.2,44.5],[-1.2,46],[-2.2,47.1],[-4.5,47.9],[-4.7,48.6],[-1.6,48.7],[-1.3,49.7],[0.2,49.7],[1.6,50.4],[2.5,51.1],[3.6,51.4],[4.5,52.5],[4.8,53],[6.9,53.4],[8.7,53.9],[8.6,55.4],[8.1,56.6],[8.6,57.1],[10.6,57.7],[10.5,56.5],[10.9,56.4],[10.2,55.6],[10,54.7],[11,54],[12.5,54.4],[14.2,53.9],[16.5,54.5],[18.5,54.8],[19.6,54.4],[21.2,55.2],[21,56.5],[21.6,57.5],[22.6,57.7],[23.5,57],[24.3,57.2],[24.4,58.3],[23.5,58.6],[23.5,59.2],[25.5,59.6],[28,59.5],[30,60],[28.5,60.5],[26,60.4],[22.9,59.9],[21.4,60.8],[21.5,61.7],[21.1,62.8],[22.2,63.5],[24.5,64.8],[25.4,65.2],[24,65.8],[22,65.6],[21.2,64.7],[20.3,63.8],[18.5,63],[17.4,62.1],[17.3,61],[18.7,60.1],[18.9,59.4],[17.8,58.8],[16.6,57.9],[16.4,56.6],[15.6,56.2],[14.3,55.6],[12.9,55.4],[12.5,56.4],[11.8,57.8],[11.2,59],[10.5,59.3],[9.5,58.9],[8,58.1],[6.6,58.1],[5.6,58.9],[5,60.2],[5,61.3],[5.2,62.4],[7,62.9],[9.5,63.7],[11,64.9],[12.5,66],[14,67.5],[15.5,68.5],[17,69.2],[19,70],[22,70.3],[25.8,71.1],[28.5,70.8],[31,70.3],[33,69.4],[36,69],[40,67.8],[41,66.5],[44,66.6],[45.5,68.5],[45.5,36.5],[36,36.5],[33,36.1],[30.5,36.4],[28,36.8],[27.3,37.5],[26.3,38.3],[26.2,39.5],[26.6,40.3],[25.5,40.9],[24,40.8],[23,40.5],[22.6,40.3],[22.9,39.4],[23.2,38.3],[24,38.1],[24,37.7],[23,37.5],[22.9,36.5],[22.4,36.5],[21.7,36.8],[21.2,37.8],[21.7,38.3],[21,38.4],[20.7,39],[20,39.6],[19.4,40.4],[19.5,41.8],[18.5,42.5],[17,43.2],[15.9,43.6],[15,44.6],[14.3,45.2],[13.6,45.6],[13,45.7],[12.3,45.3],[12.3,44.5],[13.6,43.5],[14.2,42.4],[15.9,41.6],[17,41],[18.5,40.1],[18.3,39.8],[17,40.4],[16.5,39.7],[17.1,39],[16.5,38.4],[15.7,37.9],[15.6,38.3],[16,39.5],[15.6,40],[14.9,40.2],[14,40.8],[12.6,41.4],[11.1,42.4],[10.5,43],[10.2,44],[8.8,44.4],[7.6,43.8],[6.2,43.1],[4.8,43.4],[3.1,43],[3.2,42.3],[3.2,41.9],[1,41],[0,39.9],[-0.3,39.4],[0.2,38.7],[-0.7,37.6],[-2.1,36.7],[-4.4,36.7]],
+  [[-5.7,50.1],[-3,50.6],[1.4,51.2],[1.7,52.7],[0.3,53.4],[-0.2,54.1],[-1.6,55.6],[-2.1,56.9],[-1.8,57.6],[-4,57.6],[-3,58.6],[-5,58.6],[-6.2,57.5],[-5.6,56.3],[-5,55],[-3,54.9],[-3.3,54.2],[-3,53.4],[-4.6,53.3],[-4.2,52.3],[-5.2,51.7],[-3,51.4],[-4.2,51.1]],
+  [[-6,52],[-6.2,53.4],[-5.6,54.6],[-6.9,55.3],[-8.3,55.2],[-10,54.2],[-9.9,53.4],[-9.5,52.6],[-10.3,51.9],[-9.6,51.5],[-8,51.8]],
+  [[-22.6,63.9],[-21.5,64.3],[-24,64.9],[-22.5,65.5],[-24.3,65.6],[-22.6,66.4],[-18.6,66.2],[-16,66.5],[-14.5,65.9],[-13.6,65.1],[-15,64.3],[-18.7,63.4],[-21,63.8]],
+  [[12.4,37.9],[15.6,38.3],[15.1,36.7],[14.3,37],[12.6,37.6]],
+  [[8.4,39.1],[9.7,39.2],[9.8,41],[8.2,41],[8.4,40]],
+  [[8.6,41.4],[9.4,41.8],[9.5,43],[8.6,42.5]],
+  [[23.5,35.3],[26.3,35.1],[26.2,35.3],[24,35.6]],
+];
+// Schwarzes Meer liegt innerhalb der Landfläche und wird darübergelegt.
+const INNER_SEA = [[27.5,42.4],[28.6,43.4],[28.7,44.3],[29.7,45.3],[30.5,46.4],[31.8,46.6],[33.5,45.9],[32.5,45.4],[33.6,44.4],[35.3,44.9],[36.6,45.2],[38.2,46.9],[39.3,47.1],[38,45.6],[37.5,44.7],[39.5,43.4],[41.6,41.6],[39,41],[36.5,41.3],[35,42],[33.3,42],[31,41.1],[29.1,41.2],[28,41.6]];
+const pts = (poly) => poly.map(([lo, la]) => project(lo, la).map((v) => v.toFixed(1)).join(',')).join(' ');
+const xy = (s) => project(s.lon, s.lat);
+
+// Position des Punkts auf der Karte nach einer Zahl von Trainings.
+function mapPoint(trainings) {
+  const j = journey(trainings);
+  const [cx, cy] = xy(j.current);
+  if (!j.half) return { x: cx, y: cy };
+  const [nx, ny] = xy(j.next);
+  return { x: (cx + nx) / 2, y: (cy + ny) / 2 };
+}
+
+function renderMap(state, from) {
+  const done = state.trainings.length;
+  const j = journey(done);
+  const land = LAND.map((p) => `<polygon class="land" points="${pts(p)}"/>`).join('') + `<polygon class="meer" points="${pts(INNER_SEA)}"/>`;
+  const all = [HOME, ...CAPITALS].map(xy);
+  const here = mapPoint(done);
+  const gone = [...j.stamps.map(xy), [here.x, here.y]];
+  const line = (p, cls) => `<polyline class="${cls}" points="${p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}"/>`;
+  const reached = new Set(j.stamps.map((s) => s.name));
+  const stops = CAPITALS.map((s) => {
+    const [x, y] = xy(s);
+    return `<circle class="stop${reached.has(s.name) ? ' reached' : ''}" data-stop="${esc(s.name)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"><title>${esc(s.name)}</title></circle>`;
+  }).join('');
+  const [hx, hy] = xy(HOME);
+  const home = `<circle class="home" data-home cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4"><title>Berlin (Start)</title></circle>`;
+  let anim = '';
+  if (Number.isFinite(from)) {
+    const f = mapPoint(from);
+    anim = `<animate attributeName="cx" from="${f.x.toFixed(1)}" to="${here.x.toFixed(1)}" dur="1.8s" fill="freeze"/><animate attributeName="cy" from="${f.y.toFixed(1)}" to="${here.y.toFixed(1)}" dur="1.8s" fill="freeze"/>`;
+  }
+  const [W, H] = project(45, 34);
+  return `<svg class="karte" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" role="img" aria-label="Europakarte mit deiner Reise"><rect width="100%" height="100%" class="meer"/>${land}${line(all, 'route')}${line(gone, 'route gone')}${stops}${home}<circle class="here" data-here cx="${here.x.toFixed(1)}" cy="${here.y.toFixed(1)}" r="6">${anim}</circle></svg>`;
+}
+
+const stampHtml = (s, extra = '') =>
+  `<div class="stempel${extra}" data-stamp${extra ? ' data-stamp-new' : ''}><b>${esc(s.name)}</b><small>${s === HOME ? 'Startpunkt' : esc(s.country)}</small></div>`;
+
+function renderPass(state) {
+  const j = journey(state.trainings.length);
+  return `<section class="pass"><h3>🛂 Reisepass</h3><p><b>Hauptstädte: ${j.stamps.length} von ${j.stampTotal}</b> <span class="km">${j.km.toLocaleString('de-DE')} km gereist</span></p>
+<div class="stempel-liste">${j.stamps.map((s) => stampHtml(s)).join('')}</div>
+${j.next ? `<p class="naechster">Nächster Stempel: ${esc(j.next.name)}</p>` : ''}</section>`;
+}
+
+function awardsOf(state) {
+  const best = {};
+  return state.results.map((r) => {
+    const prev = best[r.testId];
+    const award = prev === undefined ? 'startmarke' : r.value > prev ? 'pokal' : 'none';
+    best[r.testId] = Math.max(prev ?? 0, r.value);
+    return { ...r, award };
+  });
+}
+
+function renderPokale(state) {
+  const list = awardsOf(state);
+  const li = (r) => `<li>${esc(testName(r.testId))}: <b>${r.value}</b> ${esc(testUnit(r.testId))}</li>`;
+  const pokale = list.filter((r) => r.award === 'pokal').map(li).join('');
+  const marken = list.filter((r) => r.award === 'startmarke').map(li).join('');
+  return `<section class="pokale"><h3>🏆 Pokale</h3><ul>${pokale || '<li>Noch keine, der erste kommt beim zweiten Turnier.</li>'}</ul></section>
+<section class="startmarken"><h3>🚩 Startmarken</h3><ul>${marken || '<li>Kommen beim ersten Turnier.</li>'}</ul></section>${renderFitPokale(state)}`;
+}
+
+function renderFitPokale(state) {
+  const items = (state.favorites ?? [])
+    .map((f) => ({ f, fit: (state.fittings ?? []).find((x) => x.favId === f.id && x.level === 'passt') }))
+    .filter((x) => x.fit)
+    .map(({ f, fit }) => `<li><b>${esc(f.name)}</b>, seit dem Turnier in ${esc(stageOf(fit.trainingNumber).city.name)}</li>`)
+    .join('');
+  return items ? `<section class="passt-pokale"><h3>👗 Passt wieder!</h3><ul>${items}</ul></section>` : '';
+}
+
+// Ansicht direkt nach "Training fertig": Reise sichtbar weiter, Lob.
+function renderFinish(state, info, spruch, messages) {
+  const stamp = info.kind === 'unterwegs' ? '' : `<div class="stempel-liste">${stampHtml(info.city, ' neu')}</div>`;
+  const msgs = messages.length ? `<ul class="meldungen">${messages.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
+  return `<section class="abschluss"><h2>${esc(info.title)}</h2>${renderMap(state, info.from)}${stamp}${msgs}
+<p class="spruch" data-spruch>${esc(spruch)}</p>
+<button type="button" class="fertig" data-action="close-finish">Weiter</button>${remoodHtml(state)}${undoButton(state)}</section>`;
+}
+
+function draw(root, state, mood, notice, today, finish, fits) {
+  const j = journey(state.trainings.length);
+  const head = `<header><h1>Meine Weltreise</h1><p>Hauptstädte: ${j.stamps.length} von ${j.stampTotal} · Training ${state.trainings.length} von ${TOTAL_TRAININGS}</p></header>
+${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}`;
+  if (finish) {
+    root.innerHTML = `${head}${renderFinish(state, finish.info, finish.spruch, finish.messages)}${renderReminder(state, today)}`;
+    return;
+  }
+  root.innerHTML = `${head}
+${renderReminder(state, today)}
+${renderMap(state)}
+${renderPass(state)}
+${renderFavoritesStatus(state)}
+${renderToday(state, mood, today, fits)}
+${renderPokale(state)}
+${renderFavoritesSettings(state)}
+<section class="sicherung"><h3>Sicherung</h3><p class="zuletzt">${state.lastBackup ? `Zuletzt gesichert am ${deDate(state.lastBackup.date)}.` : 'Noch nie gesichert.'}</p><button type="button" data-action="export">Sicherung speichern</button>
+<label class="datei">Sicherung laden <input type="file" accept=".json,application/json" data-action="import"></label></section>`;
+}
+
+function mount(root, storage, env = {}) {
+  const status = loadStatus(storage);
+  let state = status.state;
+  let mood = 2;
+  let finish = null;
+  let fits = {};
+  const today = env.today ?? (() => new Date().toLocaleDateString('sv-SE'));
+  const ask = (q) => (typeof globalThis.confirm === 'function' ? globalThis.confirm(q) : true);
+  // Schon getippte Turnierzahlen und ein gewähltes Nachtrage-Datum überleben das Neuzeichnen der Seite.
+  const typedValues = () =>
+    [...(root.querySelectorAll?.('[data-test], [data-field="date"]') ?? [])]
+      .filter((i) => i.value)
+      .map((i) => [i.dataset.test ? `[data-test="${i.dataset.test}"]` : '[data-field="date"]', i.value]);
+  const show = (notice = '', keepTyped = true) => {
+    const typed = keepTyped ? typedValues() : [];
+    draw(root, state, mood, notice, today(), finish, fits);
+    for (const [sel, value] of typed) {
+      const field = root.querySelector?.(sel);
+      if (!field) continue;
+      field.value = value;
+      const box = field.closest?.('details');
+      if (box) box.open = true;
+    }
+    root.querySelector?.('.notice')?.scrollIntoView?.({ block: 'center' });
+  };
+  try {
+    globalThis.navigator?.storage?.persist?.();
+  } catch {
+    // Dauerhafter Speicher nicht verfügbar: nur ein Zusatz.
+  }
+  const timers = env.timerEl
+    ? timerController(env.timerEl, env, (testId, seconds) => {
+        const field = root.querySelector?.(`[data-test="${testId}"]`);
+        if (field) field.value = String(seconds);
+      })
+    : null;
+  show(status.damaged ? 'Dein gespeicherter Stand konnte nicht gelesen werden. Eine Kopie wurde aufbewahrt, bitte sag Bescheid, bevor du weitermachst.' : '');
+
+  const showFinish = (awards, messages, ok) => {
+    const info = finishInfo(state, awards);
+    let last = null;
+    try {
+      last = storage.getItem(SPRUCH_KEY);
+    } catch {
+      // ohne Speicher: dann eben irgendein Spruch
+    }
+    const spruch = pickSpruch(info.spruchKind, last);
+    try {
+      storage.setItem(SPRUCH_KEY, spruch);
+    } catch {
+      // nicht schlimm
+    }
+    finish = { info, spruch, messages };
+    show(ok ? '' : 'Speichern hat nicht geklappt, bitte lade die Sicherung herunter.');
+    root.querySelector?.('.abschluss')?.scrollIntoView?.({ block: 'start' });
+  };
+
+  root.addEventListener('click', (ev) => {
+    const el = ev.target.closest('[data-mood], [data-action], [data-fit], [data-remood]');
+    if (!el) return;
+    if (el.dataset.remood) {
+      state = changeLastMood(state, Number(el.dataset.remood));
+      return show(save(storage, state) ? 'Stimmung geändert ✔' : 'Speichern hat nicht geklappt.');
+    }
+    if (el.dataset.fit) {
+      const { fit, level } = el.dataset;
+      fits = { ...fits };
+      if (fits[fit] === level) delete fits[fit];
+      else fits[fit] = level;
+      root.querySelectorAll(`[data-fit="${fit}"]`).forEach((b) => b.classList.toggle('selected', fits[fit] === b.dataset.level));
+      return;
+    }
+    if (el.dataset.action === 'save-favorites') {
+      const entries = [...root.querySelectorAll('[data-fav]')].map((i) => ({ id: i.dataset.fav === 'neu' ? null : i.dataset.fav, name: i.value }));
+      state = saveFavorites(state, entries);
+      return show(save(storage, state) ? 'Lieblingsstücke gespeichert ✔' : 'Speichern hat nicht geklappt.');
+    }
+    if (el.dataset.mood) {
+      mood = Number(el.dataset.mood);
+      root.querySelectorAll('[data-mood]').forEach((b) => b.classList.toggle('selected', b === el));
+      return;
+    }
+    if (el.dataset.action === 'timer') {
+      timers?.start({ dose: el.dataset.dose, testId: el.dataset.testTimer });
+      return;
+    }
+    if (el.dataset.action === 'done') {
+      const chosen = root.querySelector?.('[data-field="date"]')?.value ?? '';
+      let date = today();
+      if (chosen) {
+        const check = checkPastDate(state, chosen, today());
+        if (check === 'zukunft') return show('Für heute einfach ohne Datum eintragen. Ein Tag in der Zukunft geht nicht.');
+        if (check === 'zu-frueh') return show('Nachtragen geht nur für Tage nach deinem letzten eingetragenen Training.');
+        if (check !== 'ok') return show('Bitte wähle ein gültiges Datum.');
+        date = chosen;
+      }
+      const fields = [...root.querySelectorAll('[data-test]')];
+      const inputs = fields.map((i) => [i.dataset.test, parseFloat(i.value)]);
+      if (fields.length > 0) {
+        const check = checkInputs(fields.map((i) => i.value));
+        if (check === 'ungueltig') return show('Bitte trage nur Zahlen größer als 0 ein (oder lass das Feld leer).');
+        if (check === 'leer' && !ask('Du hast keine Zahlen eingetragen. Turnier trotzdem abschließen? Das nächste ist erst in 4 Wochen.')) return;
+        for (const [id, value] of inputs) {
+          if (Number.isFinite(value) && suspicious(state, id, value) && !ask(`${testName(id)}: ${value}, ist das richtig? Das ist viel mehr als dein Rekord.`)) return;
+        }
+      }
+      const before = state.trainings.length;
+      state = completeTraining(state, date, mood);
+      if (state.trainings.length === before) return show('Heute ist schon eingetragen ✔');
+      const msgs = [];
+      const awards = { pokal: 0, passt: 0 };
+      for (const [id, value] of inputs) {
+        const r = recordResult(state, id, value);
+        state = r.state;
+        if (r.award === 'pokal') {
+          awards.pokal++;
+          msgs.push(`Pokal für ${testName(id)}! 🏆`);
+        }
+        if (r.award === 'startmarke') msgs.push(`Startmarke für ${testName(id)} gesetzt 🚩`);
+      }
+      if (sessionFor(state.trainings.length).kind === 'turnier') {
+        for (const [favId, level] of Object.entries(fits)) {
+          const r = recordFitting(state, favId, level);
+          state = r.state;
+          if (r.award === 'passt-pokal') {
+            awards.passt++;
+            const name = activeFavorites(state).find((f) => f.id === favId)?.name ?? '';
+            msgs.push(`„${name}“ passt wieder! 👗🏆`);
+          }
+        }
+      }
+      fits = {};
+      const ok = save(storage, state);
+      timers?.stop();
+      showFinish(awards, msgs, ok);
+      return;
+    }
+    if (el.dataset.action === 'close-finish') {
+      finish = null;
+      return show();
+    }
+    if (el.dataset.action === 'undo') {
+      if (!ask('Den letzten Eintrag wirklich zurücknehmen?')) return;
+      keepPrevious(storage, state);
+      state = undoLast(state);
+      finish = null;
+      return show(save(storage, state) ? 'Letzter Eintrag zurückgenommen.' : 'Zurückgenommen, aber Speichern hat nicht geklappt.', false);
+    }
+    if (el.dataset.action === 'export') {
+      state = markBackup(state, today());
+      save(storage, state);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([serialize(state)], { type: 'application/json' }));
+      a.download = 'weltreise-sicherung.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      show('Sicherung gespeichert ✔ Die Datei liegt bei deinen Downloads.');
+    }
+  });
+
+  root.addEventListener('change', async (ev) => {
+    if (ev.target.dataset.action !== 'import') return;
+    const file = ev.target.files[0];
+    if (!file) return;
+    const parsed = parse(await file.text());
+    if (!parsed) return show('Diese Datei passt nicht zur Weltreise. Dein Stand bleibt unverändert.');
+    if (!ask(importQuestion(state, parsed))) return;
+    keepPrevious(storage, state);
+    state = parsed;
+    finish = null;
+    show(save(storage, state) ? 'Sicherung geladen ✔' : 'Sicherung geladen, aber Speichern hat nicht geklappt.', false);
+  });
+}
+
+
+let storage;
+try {
+  storage = window.localStorage ?? localStorage;
+  storage.getItem(STORAGE_KEY);
+} catch {
+  // Kein Speicher erlaubt: Seite läuft trotzdem, Speichern meldet dann einen Hinweis.
+  storage = { getItem: () => null, setItem: () => { throw new Error('kein Speicher'); } };
+}
+mount(document.getElementById('app'), storage, { timerEl: document.getElementById('timer') });
+
+try {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js');
+  }
+} catch {
+  // Ohne Offline-Speicher läuft die Seite trotzdem.
+}
+
+})();
+</script>
+</body>
+</html>
