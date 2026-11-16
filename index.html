@@ -1062,8 +1062,7 @@ ${renderToday(state, mood, today, fits)}
 ${renderPokale(state)}
 ${renderFavoritesSettings(state)}
 <section class="sicherung"><h3>Sicherung</h3><p class="zuletzt">${state.lastBackup ? `Zuletzt gesichert am ${deDate(state.lastBackup.date)}.` : 'Noch nie gesichert.'}</p><button type="button" data-action="export">Sicherung speichern</button>
-<label class="datei">Sicherung laden <input type="file" accept=".json,application/json" data-action="import"></label></section>
-<section class="vibration"><h3>Vibration</h3><p>Spürst du beim Timer nichts? Hier kannst du die Vibration ausprobieren.</p><button type="button" data-action="vibe-test">Vibration testen</button></section>`;
+<label class="datei">Sicherung laden <input type="file" accept=".json,application/json" data-action="import"></label></section>`;
 }
 
 function mount(root, storage, env = {}) {
@@ -1073,9 +1072,6 @@ function mount(root, storage, env = {}) {
   let finish = null;
   let fits = {};
   const today = env.today ?? (() => new Date().toLocaleDateString('sv-SE'));
-  const nav = globalThis.navigator;
-  const vibrateNow = 'vibrate' in env ? env.vibrate : typeof nav?.vibrate === 'function' ? (p) => nav.vibrate(p) : null;
-  const later = env.later ?? ((fn, ms) => setTimeout(fn, ms));
   const ask = (q) => (typeof globalThis.confirm === 'function' ? globalThis.confirm(q) : true);
   // Schon getippte Turnierzahlen und ein gewähltes Nachtrage-Datum überleben das Neuzeichnen der Seite.
   const typedValues = () =>
@@ -1150,20 +1146,6 @@ function mount(root, storage, env = {}) {
       mood = Number(el.dataset.mood);
       root.querySelectorAll('[data-mood]').forEach((b) => b.classList.toggle('selected', b === el));
       return;
-    }
-    if (el.dataset.action === 'vibe-test') {
-      // Einmal direkt nach dem Tippen, einmal später (so wie beim Timer): zeigt, wo die Vibration hängt.
-      if (!vibrateNow) return show('Dieser Browser kann nicht vibrieren.');
-      const buzz = () => {
-        try {
-          return vibrateNow([400, 150, 400]);
-        } catch {
-          return false;
-        }
-      };
-      if (buzz() === false) return show('Der Browser hat die Vibration abgelehnt.');
-      later(buzz, 4000);
-      return show('Jetzt sollte es zweimal vibrieren: sofort und nach 4 Sekunden noch einmal. Sag Claude, was du gespürt hast.');
     }
     if (el.dataset.action === 'timer') {
       timers?.start({ dose: el.dataset.dose, testId: el.dataset.testTimer });
