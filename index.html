@@ -38,6 +38,7 @@ h3 { font-size:1.05rem; margin:1rem 0 .3rem; color:var(--nacht); }
 .erinnerung { background:var(--tuerkis-hell); border:2px solid var(--tuerkis-text); padding:10px 12px; border-radius:12px; margin:10px 0; }
 .erinnerung p { margin:0 0 8px; }
 .erinnerung button { padding:10px 16px; font-size:1rem; border:0; border-radius:10px; background:var(--tuerkis-text); color:#fff; }
+.erinnerung .zweit { background:#fff; color:var(--tuerkis-text); border:1px solid var(--tuerkis-text); margin-left:6px; }
 .zuletzt { font-size:.9rem; color:var(--leise); margin:0 0 4px; }
 .sicherung button, .datei { display:inline-block; padding:10px 14px; border:1px solid var(--tuerkis-text); border-radius:10px; background:#fff; color:var(--tuerkis-text); margin:4px 6px 4px 0; }
 .datei input { display:block; margin-top:6px; }
@@ -880,6 +881,11 @@ const REMINDER_REASON = {
   alt: 'Deine letzte Sicherung ist über 2 Wochen her.',
 };
 
+// Rückfrage nach dem Herunterladen: erst bei "Ja" gilt die Sicherung als erledigt.
+function backupQuestionHtml(name) {
+  return `<section class="erinnerung sicherung-frage" role="status"><p><b>Liegt die Datei „${esc(name)}“ jetzt bei deinen Downloads?</b></p><button type="button" data-action="backup-ok">Ja, sie ist da</button> <button type="button" class="zweit" data-action="backup-retry">Nein, noch mal</button></section>`;
+}
+
 function renderReminder(state, today) {
   const reason = backupReminder(state, today);
   if (!reason) return '';
@@ -1088,10 +1094,10 @@ function renderFinish(state, info, spruch, messages) {
 <button type="button" class="fertig" data-action="close-finish">Weiter</button>${remoodHtml(state)}${undoButton(state)}</section>`;
 }
 
-function draw(root, state, mood, notice, today, finish, fits, passOpen = false) {
+function draw(root, state, mood, notice, today, finish, fits, passOpen = false, backupAsk = null) {
   const j = journey(state.trainings.length);
   const head = `<header><h1>Powerzeit</h1><p>Hauptstädte: ${j.stamps.length} von ${j.stampTotal} · Training ${state.trainings.length} von ${TOTAL_TRAININGS}</p></header>
-${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}`;
+${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}${backupAsk ? backupQuestionHtml(backupAsk) : ''}`;
   if (passOpen && !finish) {
     root.innerHTML = `${head}${renderPassPage(state)}`;
     return;
@@ -1119,6 +1125,7 @@ function mount(root, storage, env = {}) {
   let finish = null;
   let fits = {};
   let passOpen = false;
+  let backupAsk = null; // Dateiname, solange die Rückfrage nach dem Herunterladen offen ist
   const today = env.today ?? (() => new Date().toLocaleDateString('sv-SE'));
   const ask = (q) => (typeof globalThis.confirm === 'function' ? globalThis.confirm(q) : true);
   // Schon getippte Turnierzahlen und ein gewähltes Nachtrage-Datum überleben das Neuzeichnen der Seite.
@@ -1128,7 +1135,7 @@ function mount(root, storage, env = {}) {
       .map((i) => [i.dataset.test ? `[data-test="${i.dataset.test}"]` : '[data-field="date"]', i.value]);
   const show = (notice = '', keepTyped = true) => {
     const typed = keepTyped ? typedValues() : [];
-    draw(root, state, mood, notice, today(), finish, fits, passOpen);
+    draw(root, state, mood, notice, today(), finish, fits, passOpen, backupAsk);
     for (const [sel, value] of typed) {
       const field = root.querySelector?.(sel);
       if (!field) continue;
@@ -1278,16 +1285,24 @@ function mount(root, storage, env = {}) {
       finish = null;
       return show(save(storage, state) ? 'Letzter Eintrag zurückgenommen.' : 'Zurückgenommen, aber Speichern hat nicht geklappt.', false);
     }
-    if (el.dataset.action === 'export') {
-      state = markBackup(state, today());
-      save(storage, state);
+    if (el.dataset.action === 'export' || el.dataset.action === 'backup-retry') {
+      // Die Datei enthält schon den Sicherungs-Vermerk. Im Speicher gilt er erst, wenn die Datei wirklich angekommen ist.
+      const name = `powerzeit-sicherung-${today()}.json`;
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([serialize(state)], { type: 'application/json' }));
-      a.download = 'weltreise-sicherung.json';
+      a.href = URL.createObjectURL(new Blob([serialize(markBackup(state, today()))], { type: 'application/json' }));
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-      show('Sicherung gespeichert ✔ Die Datei liegt bei deinen Downloads.');
+      backupAsk = name;
+      show();
+      root.querySelector?.('.sicherung-frage')?.scrollIntoView?.({ block: 'center' });
+      return;
+    }
+    if (el.dataset.action === 'backup-ok') {
+      backupAsk = null;
+      state = markBackup(state, today());
+      return show(save(storage, state) ? 'Sicherung gespeichert ✔' : 'Die Datei ist da, aber der Vermerk konnte nicht gespeichert werden.');
     }
   });
 
