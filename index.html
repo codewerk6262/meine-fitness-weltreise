@@ -221,8 +221,15 @@ const VARIANTS = [
   { block: 8, replaces: 'kniebeugen', exercise: { id: 'kniebeugen-pause', name: 'Kniebeugen mit Halt unten', explanation: 'Normale Kniebeuge, unten 2 Sekunden ruhig halten, dann hoch. Nur so tief, wie es für die Knie angenehm ist.', dose: '3 × 12 Wiederholungen' } },
   { block: 9, replaces: 'plank', exercise: { id: 'seitstuetz', name: 'Seitstütz', explanation: 'Auf der Seite liegen, auf einen Unterarm stützen und das Becken anheben, sodass der Körper eine gerade Linie bildet. Leichter: die Knie bleiben am Boden.', dose: '3 × 30 Sekunden je Seite' } },
   { block: 10, replaces: 'ausfallschritte', exercise: { id: 'ausfallschritte-seitlich', name: 'Seitliche Ausfallschritte', explanation: 'Großer Schritt zur Seite, dieses Knie beugen und den Po nach hinten schieben, das andere Bein bleibt gestreckt. Zurück zur Mitte, Seite wechseln.', dose: '3 × 12 Wiederholungen je Seite' } },
-  { block: 11, replaces: 'dead-bug', exercise: { id: 'bergsteiger-langsam', name: 'Langsame Bergsteiger', explanation: 'Im Liegestütz (Hände unter den Schultern) abwechselnd ein Knie langsam zur Brust ziehen, ohne zu springen. Rücken bleibt gerade.', dose: '3 × 12 Wiederholungen je Seite' } },
 ];
+
+// Kurzer, fordernder Schluss nach dem Kraftteil, ohne Springen (schont die Knie).
+const INTERVALL = [
+  { id: 'intervalle', name: 'Intervalle', explanation: '20 Sekunden so schnell, wie es sauber geht, dann 40 Sekunden locker gehen oder auf der Stelle treten. Runde 1: schnelle Kniebeugen. Runde 2: schnelle Bergsteiger (im Liegestütz die Knie zügig abwechselnd zur Brust, ohne zu springen). Runde 3: Schattenboxen (locker in den Knien, schnell in die Luft boxen). Runde 4: deine Lieblingsübung davon. Alles ohne zu springen. Die harten 20 Sekunden dürfen richtig anstrengend sein.', dose: '4 × 20 Sekunden hart, 40 Sekunden locker' },
+];
+
+const ANSTRENGUNG =
+  'Am Ende eines Satzes sollten nur noch 1–3 Wiederholungen gehen. Wenn es deutlich mehr wären, mach die Übung langsamer oder tiefer.';
 
 const HINWEIS =
   'Wenn Knie oder Rücken wehtun, hör auf oder mach die Übung kleiner (weniger tief, weniger Wiederholungen). Etwas Muskelkater ist normal, Schmerz im Gelenk nicht. Die Zeit zählt, nicht die Sätze: Wenn die 20 Minuten um sind, bist du fertig.';
@@ -254,7 +261,7 @@ function mainFor(block) {
     { id: 'ausfallschritte', name: 'Ausfallschritte rückwärts', explanation: 'Mit einem Bein einen großen Schritt nach hinten machen, beide Knie beugen, dann zurück zum Stand. Beine abwechseln.', dose: `${sets} × ${reps} Wiederholungen je Seite` },
     { id: 'beckenheben', name: 'Beckenheben', explanation: 'Auf dem Rücken liegen, Füße aufgestellt, Po und Becken anheben bis Knie, Hüfte und Schultern eine Linie bilden (auch Glute Bridge genannt).', dose: `${sets} × ${reps} Wiederholungen` },
     { id: 'liegestuetze-knie', name: 'Liegestütze auf den Knien', explanation: 'Hände unter den Schultern, Knie am Boden, Brust Richtung Boden beugen und wieder hochdrücken, Rücken bleibt gerade.', dose: `${sets} × ${Math.max(reps - 2, 6)} Wiederholungen` },
-    { id: 'dead-bug', name: 'Dead Bug (Käfer)', explanation: 'Auf dem Rücken, Arme zur Decke, Knie über der Hüfte. Gegenüberliegenden Arm und Bein langsam strecken, ohne dass der untere Rücken abhebt, dann wechseln.', dose: `${sets} × ${reps} Wiederholungen` },
+    { id: 'ytw', name: 'Y-T-W in Bauchlage', explanation: 'Auf dem Bauch liegen, Stirn auf einem Handtuch, Blick zum Boden. Die Arme anheben und die Schulterblätter zusammenziehen, erst als Y schräg nach vorn, dann als T zur Seite, dann als W mit angewinkelten Ellbogen. Jede Form kurz oben halten. Y, T und W zusammen sind eine Wiederholung. Das stärkt den oberen Rücken und gleicht die Liegestütze aus.', dose: `${sets} × ${Math.max(reps - 4, 6)} Wiederholungen` },
     { id: 'plank', name: 'Plank (Unterarmstütz)', explanation: 'Auf Unterarmen und Zehen stützen, Körper in gerader Linie halten, Bauch und Po fest.', dose: `${sets} × ${plank} Sekunden` },
   ];
   return base.map((e) => VARIANTS.find((v) => v.replaces === e.id && v.block <= block)?.exercise ?? e);
@@ -269,9 +276,11 @@ function sessionFor(n) {
     block,
     warmup: WARMUP,
     main: turnier ? [] : mainFor(block),
+    intervall: turnier ? [] : INTERVALL,
     cooldown: COOLDOWN,
     tests: turnier ? TESTS : [],
     pause: `Pause: etwa ${PAUSE_SEC} Sekunden zwischen den Sätzen.`,
+    anstrengung: ANSTRENGUNG,
     hinweis: HINWEIS,
   };
 }
@@ -282,10 +291,24 @@ function sessionFor(n) {
 const LEAD_SEC = 3;
 const LEAD = { label: "Gleich geht's los", seconds: LEAD_SEC, signal: null };
 const DOSE_RE = /^(?:(\d+)\s*[×x]\s*)?(\d+)\s*(Minuten?|Sekunden?)(?:\s+je\s+(Seite|Richtung))?$/;
+const INTERVALL_RE = /^(\d+)\s*[×x]\s*(\d+)\s*Sekunden hart,\s*(\d+)\s*Sekunden locker$/;
+
+// Intervalle wie "4 × 20 Sekunden hart, 40 Sekunden locker": keine Lockerphase am Ende.
+function intervallPhases(m) {
+  const [rounds, hard, easy] = m.slice(1).map(Number);
+  const phases = [LEAD];
+  for (let r = 1; r <= rounds; r++) {
+    if (r > 1) phases.push({ label: 'Locker', seconds: easy, signal: 'pause' });
+    phases.push({ label: `Runde ${r} von ${rounds} · hart`, seconds: hard, signal: 'los' });
+  }
+  return phases;
+}
 
 // Abschnitte aus einer Dosis wie "3 × 40 Sekunden" oder "30 Sekunden je Seite".
 // null, wenn die Übung keine Zeitangabe hat (Wiederholungen).
 function phasesFor(dose, pauseSec) {
+  const iv = INTERVALL_RE.exec(String(dose).trim());
+  if (iv) return intervallPhases(iv);
   const m = DOSE_RE.exec(String(dose).trim());
   if (!m) return null;
   const sets = m[1] ? Number(m[1]) : 1;
@@ -958,12 +981,13 @@ function renderToday(state, mood = 2, today = null, fits = {}) {
     ? `<h3>Turnier</h3><p>Gib alles und trage danach deine Zahlen ein (leer lassen, wenn du einen Test auslässt).</p>${s.tests
         .map((t) => `<div class="test"><details class="uebung"><summary><b>${esc(t.name)}</b></summary><p>${esc(t.explanation)}</p></details><label>${esc(t.unit)} <input type="number" inputmode="numeric" min="1" data-test="${t.id}"></label>${testTimerButton(t)}</div>`)
         .join('')}${fittingHtml(state, fits)}`
-    : `<h3>Kraft (20 Min)</h3><p>${esc(s.pause)}</p>${s.main.map(exerciseHtml).join('')}`;
+    : `<h3>Kraft (20 Min)</h3><p>${esc(s.pause)} ${esc(s.anstrengung)}</p>${s.main.map(exerciseHtml).join('')}
+<h3>Intervalle (4 Min)</h3>${s.intervall.map(exerciseHtml).join('')}`;
   const moods = MOODS.map((m) => `<button type="button" class="mood${m.v === mood ? ' selected' : ''}" data-mood="${m.v}" aria-label="${m.l}">${m.e}</button>`).join('');
   return `<section class="heute"><h2>${head}</h2><p class="km">${next}</p>
-<h3>Aufwärmen (5 Min)</h3>${s.warmup.map(exerciseHtml).join('')}
+<h3>Aufwärmen (3 Min)</h3>${s.warmup.map(exerciseHtml).join('')}
 ${kraft}
-<h3>Dehnen (5 Min)</h3>${s.cooldown.map(exerciseHtml).join('')}
+<h3>Dehnen (3 Min)</h3>${s.cooldown.map(exerciseHtml).join('')}
 <p class="hinweis">${esc(s.hinweis)}</p>
 <div class="stimmung"><p>Wie war's?</p>${moods}</div>
 <button type="button" class="fertig" data-action="done">Training fertig</button>${backfillHtml(state, today)}${remoodHtml(state)}${undoButton(state)}</section>`;

@@ -1,5 +1,5 @@
 // Offline-Speicher der App. Neue Version = neuer Name, alte Speicher werden gelöscht.
-const CACHE = 'weltreise-4908eea5d3';
+const CACHE = 'weltreise-ec856bbfca';
 const WAIT_MS = 3000; // so lange wird bei schwachem Netz auf die neue Seite gewartet
 const FILES = ["./","manifest.webmanifest","icon-192.png","icon-512.png"]; // dazu index.html als './'
 
